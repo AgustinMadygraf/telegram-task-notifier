@@ -13,7 +13,9 @@ MVP local con FastAPI + Telegram webhook expuesto por ngrok.
 1. Configura variables de entorno (podes copiar `.env.example` a `.env`):
    - `TELEGRAM_TOKEN` (obligatorio)
    - `TELEGRAM_WEBHOOK_SECRET` (opcional, recomendado)
+   - `TELEGRAM_CHAT_ID` (opcional; fallback para ejecutar `/tasks/start` sin depender del primer webhook)
    - `DROP_PENDING_UPDATES` (opcional, default `true`)
+   - `REPOSITORY_NAME` (opcional, por default usa el nombre de la carpeta del repo)
    - Nota: `main.py` y los scripts cargan `.env` automaticamente si existe.
 
 2. Levanta el servidor:
@@ -32,13 +34,14 @@ MVP local con FastAPI + Telegram webhook expuesto por ngrok.
 6. Verifica que el backend capturo `chat_id`:
    - `curl http://127.0.0.1:8000/telegram/last_chat`
    - Esperado: `last_chat_id` distinto de `null`.
+   - Si queres evitar este paso, configura `TELEGRAM_CHAT_ID` en `.env`.
 
 7. Dispara una tarea de ejemplo:
    - PowerShell:
-     - `Invoke-RestMethod -Method POST -Uri http://127.0.0.1:8000/tasks/start -ContentType 'application/json' -Body '{"duration_seconds":2,"force_fail":false}'`
+     - `Invoke-RestMethod -Method POST -Uri http://127.0.0.1:8000/tasks/start -ContentType 'application/json' -Body '{"duration_seconds":2,"force_fail":false,"commit_proposal":"feat: notificar tiempo y resumen por telegram"}'`
    - CMD:
-     - `curl -X POST http://127.0.0.1:8000/tasks/start -H "Content-Type: application/json" -d "{\"duration_seconds\":2,\"force_fail\":false}"`
-   - Esperado: el bot envia `Termin\u00e9`.
+     - `curl -X POST http://127.0.0.1:8000/tasks/start -H "Content-Type: application/json" -d "{\"duration_seconds\":2,\"force_fail\":false,\"commit_proposal\":\"feat: notificar tiempo y resumen por telegram\"}"`
+   - Esperado: el bot envia `Termin\u00e9` + repositorio + tiempo de ejecucion + propuesta de commit.
    - Para simular error: `force_fail=true` y espera `Fall\u00f3`.
 
 ## Endpoints
@@ -54,7 +57,23 @@ MVP local con FastAPI + Telegram webhook expuesto por ngrok.
 - `POST /tasks/start`
   - Lanza tarea en background y notifica resultado al ultimo chat capturado.
   - Body ejemplo:
-    - `{"duration_seconds": 2, "force_fail": false}`
+    - `{"duration_seconds": 2, "force_fail": false, "commit_proposal": "feat: notificar tiempo y resumen por telegram"}`
+
+## Arquitectura
+
+El backend fue refactorizado a una estructura de arquitectura limpia:
+
+- `src/entities/`
+- `src/use_cases/`
+- `src/interface_adapters/presenters/`
+- `src/interface_adapters/gateways/`
+- `src/interface_adapters/controllers/`
+- `src/shared/logger.py`
+- `src/shared/config.py`
+- `src/infrastructure/httpx/`
+- `src/infrastructure/fastapi/`
+
+`main.py` queda como entrypoint compatible para `uvicorn main:app`.
 
 ## Scripts
 

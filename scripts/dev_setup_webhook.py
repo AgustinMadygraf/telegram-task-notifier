@@ -67,13 +67,15 @@ def main() -> None:
     print(
         "   Invoke-RestMethod -Method POST -Uri http://127.0.0.1:8000/tasks/start "
         "-ContentType 'application/json' "
-        "-Body '{\"duration_seconds\":2,\"force_fail\":false}'"
+        "-Body '{\"duration_seconds\":2,\"force_fail\":false,"
+        "\"commit_proposal\":\"feat: notificar tiempo y resumen por telegram\"}'"
     )
     print("4) Proba /tasks/start desde CMD:")
     print(
         "   curl -X POST http://127.0.0.1:8000/tasks/start "
         "-H \"Content-Type: application/json\" "
-        "-d \"{\\\"duration_seconds\\\":2,\\\"force_fail\\\":false}\""
+        "-d \"{\\\"duration_seconds\\\":2,\\\"force_fail\\\":false,"
+        "\\\"commit_proposal\\\":\\\"feat: notificar tiempo y resumen por telegram\\\"}\""
     )
     print("5) Confirma que el bot envie 'Termin\u00e9' (o 'Fall\u00f3' si forzas error).")
 
