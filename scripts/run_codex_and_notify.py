@@ -13,6 +13,26 @@ from notify_task import build_payload, detect_repository_name, send_task_notific
 from src.shared.config import load_settings
 
 
+def get_git_status_snapshot() -> list[str] | None:
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=PROJECT_ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except Exception:
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    lines = [line.rstrip() for line in result.stdout.splitlines() if line.strip()]
+    lines.sort()
+    return lines
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Ejecuta Codex CLI y luego notifica /tasks/start automaticamente.",
@@ -56,6 +76,11 @@ def parse_args() -> argparse.Namespace:
         help="Muestra curl de notificacion pero no lo envia.",
     )
     parser.add_argument(
+        "--always-notify",
+        action="store_true",
+        help="Notifica aunque no haya cambios de archivos en la iteracion.",
+    )
+    parser.add_argument(
         "codex_command",
         nargs=argparse.REMAINDER,
         help="Comando de Codex a ejecutar. Ej: -- codex",
@@ -86,6 +111,7 @@ def main() -> int:
 
     print("[codex-run] Ejecutando Codex CLI:")
     print(" ".join(codex_command))
+    snapshot_before = get_git_status_snapshot()
     started_at = time.perf_counter()
     codex_exit_code = 0
 
@@ -104,6 +130,17 @@ def main() -> int:
 
     elapsed_seconds = time.perf_counter() - started_at
     force_fail = args.fail_on_nonzero and codex_exit_code != 0
+
+    snapshot_after = get_git_status_snapshot()
+    has_file_changes = True
+    if snapshot_before is not None and snapshot_after is not None:
+        has_file_changes = snapshot_before != snapshot_after
+    elif snapshot_before is None or snapshot_after is None:
+        print("[codex-run] Advertencia: no se pudo evaluar cambios por git. Se notificara por seguridad.")
+
+    if not args.always_notify and not has_file_changes:
+        print("[codex-run] No hubo cambios de archivos en la iteracion. Se omite notificacion.")
+        return codex_exit_code
 
     payload = build_payload(
         duration_seconds=args.duration_seconds,

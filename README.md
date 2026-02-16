@@ -42,10 +42,12 @@ MVP local con FastAPI + Telegram webhook expuesto por ngrok, todo iniciado desde
 
 5. (Opcional) Notificar automaticamente luego de usar Codex CLI:
    - `python scripts/run_codex_and_notify.py --commit-proposal "feat: resumen de cambios" -- codex`
-   - Este wrapper ejecuta Codex, mide el tiempo real y envia `curl` a `/tasks/start` con:
+   - Este wrapper ejecuta Codex, mide el tiempo real y envia `curl` a `/tasks/start` solo si hubo cambios de archivos en la iteracion (detectado con `git status --porcelain`), con:
      - `commit_proposal`
      - `repository_name`
      - `execution_time_seconds`
+   - Para forzar envio aunque no haya cambios:
+     - `python scripts/run_codex_and_notify.py --always-notify --commit-proposal "feat: resumen de cambios" -- codex`
 
 ## Endpoints
 
@@ -87,7 +89,7 @@ Estructura de arquitectura limpia:
 ## Scripts Python
 
 - `python scripts/run_codex_and_notify.py --commit-proposal "feat: resumen de cambios" -- codex`
-  - Ejecuta Codex CLI y al finalizar notifica automaticamente a `/tasks/start`.
+  - Ejecuta Codex CLI y al finalizar notifica automaticamente a `/tasks/start` si detecta cambios de archivos.
 
 - `python scripts/notify_task.py --commit-proposal "feat: resumen de cambios" --execution-time-seconds 42.5`
   - Envia notificacion manual via `curl` a `/tasks/start`.

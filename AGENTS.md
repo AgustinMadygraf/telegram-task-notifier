@@ -11,7 +11,10 @@
   - Ejecuta Codex CLI.
   - Mide tiempo real de ejecucion.
   - Detecta nombre del repo.
-  - Hace `curl` a `POST /tasks/start` con `commit_proposal`, `repository_name` y `execution_time_seconds`.
+  - Detecta cambios de archivos en la iteracion con `git status --porcelain`.
+  - Hace `curl` a `POST /tasks/start` solo si hubo cambios de archivos.
+  - Envia `commit_proposal`, `repository_name` y `execution_time_seconds`.
+  - Si queres forzar notificacion aunque no haya cambios: `--always-notify`.
 
 ## Notificacion manual
 - Si Codex ya corrio, podes notificar manualmente:
