@@ -107,7 +107,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 "curl -X POST http://127.0.0.1:8000/tasks/start "
                 "-H \"Content-Type: application/json\" "
                 "-d \"{\\\"duration_seconds\\\":2,\\\"force_fail\\\":false,"
-                "\\\"commit_proposal\\\":\\\"feat: notificar resumen en telegram\\\"}\""
+                "\\\"commit_proposal\\\":\\\"feat: notificar resumen en telegram\\\","
+                "\\\"repository_name\\\":\\\"telegram-task-notifier\\\","
+                "\\\"execution_time_seconds\\\":42.5}\""
             ),
         }
 
@@ -123,6 +125,8 @@ async def tasks_start(
         duration_seconds=payload.duration_seconds,
         force_fail=payload.force_fail,
         commit_proposal=payload.commit_proposal,
+        repository_name=payload.repository_name,
+        execution_time_seconds=payload.execution_time_seconds,
     )
 
     try:

@@ -28,6 +28,12 @@ class StartTaskUseCase:
             return ""
         return commit_proposal.strip()
 
+    @staticmethod
+    def _normalize_repository_name(repository_name: str | None) -> str:
+        if repository_name is None:
+            return ""
+        return repository_name.strip()
+
     def _build_notification_message(
         self,
         status_text: str,
@@ -38,10 +44,14 @@ class StartTaskUseCase:
         if not proposal:
             proposal = "Sin propuesta de commit."
 
+        repository_name = self._normalize_repository_name(task.repository_name)
+        if not repository_name:
+            repository_name = self._repository_name
+
         return "\n".join(
             [
                 status_text,
-                f"Repositorio: {self._repository_name}",
+                f"Repositorio: {repository_name}",
                 f"Tiempo de ejecucion: {elapsed_seconds:.2f}s",
                 f"Propuesta de commit: {proposal}",
             ]
@@ -49,12 +59,15 @@ class StartTaskUseCase:
 
     def start(self, request: TaskExecutionRequest) -> StartedTask:
         commit_proposal = self._normalize_commit_proposal(request.commit_proposal)
+        repository_name = self._normalize_repository_name(request.repository_name)
         self._logger.info(
             "POST /tasks/start payload=%s",
             {
                 "duration_seconds": request.duration_seconds,
                 "force_fail": request.force_fail,
                 "commit_proposal": commit_proposal,
+                "repository_name": repository_name,
+                "execution_time_seconds": request.execution_time_seconds,
             },
         )
         chat_id = self._chat_state_gateway.get_last_chat_id()
@@ -75,6 +88,8 @@ class StartTaskUseCase:
             duration_seconds=request.duration_seconds,
             force_fail=request.force_fail,
             commit_proposal=commit_proposal or None,
+            repository_name=repository_name or None,
+            execution_time_seconds=request.execution_time_seconds,
         )
 
     async def run_task_and_notify(self, task: StartedTask) -> None:
@@ -94,10 +109,14 @@ class StartTaskUseCase:
                 raise RuntimeError("Falla forzada para prueba MVP.")
 
             elapsed_seconds = time.perf_counter() - started_at
+            if task.execution_time_seconds is not None:
+                elapsed_seconds = task.execution_time_seconds
             message = self._build_notification_message("Termin\u00e9", task, elapsed_seconds)
             await self._telegram_notification_gateway.send_message(task.chat_id, message)
         except Exception:
             self._logger.exception("La tarea fallo.")
             elapsed_seconds = time.perf_counter() - started_at
+            if task.execution_time_seconds is not None:
+                elapsed_seconds = task.execution_time_seconds
             message = self._build_notification_message("Fall\u00f3", task, elapsed_seconds)
             await self._telegram_notification_gateway.send_message(task.chat_id, message)

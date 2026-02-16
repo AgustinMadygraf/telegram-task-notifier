@@ -25,6 +25,7 @@ MVP local con FastAPI + Telegram webhook expuesto por ngrok, todo iniciado desde
    - `NGROK_DOMAIN` (opcional; para dominio reservado)
    - `AUTO_SET_WEBHOOK` (opcional; default `true`)
    - `TELEGRAM_WEBHOOK_PATH` (opcional; default `/telegram/webhook`)
+   - `TASKS_START_URL` (opcional; default `http://127.0.0.1:8000/tasks/start`)
 
 2. Inicia todo desde un solo comando:
    - `scripts\run_server.bat`
@@ -37,7 +38,14 @@ MVP local con FastAPI + Telegram webhook expuesto por ngrok, todo iniciado desde
    - PowerShell:
      - `Invoke-RestMethod -Method POST -Uri http://127.0.0.1:8000/tasks/start -ContentType 'application/json' -Body '{"duration_seconds":2,"force_fail":false,"commit_proposal":"feat: notificar tiempo y resumen por telegram"}'`
    - CMD:
-     - `curl -X POST http://127.0.0.1:8000/tasks/start -H "Content-Type: application/json" -d "{\"duration_seconds\":2,\"force_fail\":false,\"commit_proposal\":\"feat: notificar tiempo y resumen por telegram\"}"`
+      - `curl -X POST http://127.0.0.1:8000/tasks/start -H "Content-Type: application/json" -d "{\"duration_seconds\":2,\"force_fail\":false,\"commit_proposal\":\"feat: notificar tiempo y resumen por telegram\"}"`
+
+5. (Opcional) Notificar automaticamente luego de usar Codex CLI:
+   - `python scripts/run_codex_and_notify.py --commit-proposal "feat: resumen de cambios" -- codex`
+   - Este wrapper ejecuta Codex, mide el tiempo real y envia `curl` a `/tasks/start` con:
+     - `commit_proposal`
+     - `repository_name`
+     - `execution_time_seconds`
 
 ## Endpoints
 
@@ -75,3 +83,11 @@ Estructura de arquitectura limpia:
 - Si `NGROK_ENABLED=true`, abre el tunel con `pyngrok`.
 - Si `AUTO_SET_WEBHOOK=true`, configura webhook de Telegram automaticamente.
 - Al cerrar (Ctrl+C), intenta bajar server y ngrok ordenadamente.
+
+## Scripts Python
+
+- `python scripts/run_codex_and_notify.py --commit-proposal "feat: resumen de cambios" -- codex`
+  - Ejecuta Codex CLI y al finalizar notifica automaticamente a `/tasks/start`.
+
+- `python scripts/notify_task.py --commit-proposal "feat: resumen de cambios" --execution-time-seconds 42.5`
+  - Envia notificacion manual via `curl` a `/tasks/start`.
