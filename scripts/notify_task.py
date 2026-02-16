@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -78,7 +79,7 @@ def send_task_notification(
     ]
 
     print("[notify] curl command:")
-    print(" ".join(command))
+    print(" ".join(shlex.quote(part) for part in command))
 
     if dry_run:
         print("[notify] dry-run activo. No se envia request.")
@@ -152,6 +153,12 @@ def main() -> int:
     modified_files_count = args.modified_files_count
     if modified_files_count < 0:
         print("ERROR: --modified-files-count no puede ser negativo.", file=sys.stderr)
+        return 2
+    if args.duration_seconds < 0:
+        print("ERROR: --duration-seconds no puede ser negativo.", file=sys.stderr)
+        return 2
+    if args.execution_time_seconds is not None and args.execution_time_seconds < 0:
+        print("ERROR: --execution-time-seconds no puede ser negativo.", file=sys.stderr)
         return 2
 
     repository_name = args.repository_name.strip() or detect_repository_name(settings.repository_name)
