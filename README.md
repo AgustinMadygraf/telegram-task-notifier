@@ -132,3 +132,8 @@ Pasos rapidos en VPS:
 5. Emitir SSL:
    - `certbot --nginx -d api.datamaq.com.ar`
 6. Configurar webhook en Telegram (`setWebhook`) con `secret_token`.
+
+Documentacion operativa relacionada:
+
+- `docs/deploy-fastapi-telegram-vps.md`
+- `docs/github-actions-fastapi-vps.md`
