@@ -1,9 +1,5 @@
 import argparse
-import json
 import os
-import shlex
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -11,93 +7,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.shared.config import load_settings
-
-
-def detect_repository_name(default_name: str) -> str:
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            cwd=PROJECT_ROOT,
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            root_path = result.stdout.strip()
-            if root_path:
-                return Path(root_path).name
-    except Exception:
-        pass
-
-    return default_name
-
-
-def resolve_curl_binary() -> str:
-    for candidate in ("curl.exe", "curl"):
-        found = shutil.which(candidate)
-        if found:
-            return found
-    raise RuntimeError("No se encontro curl en PATH.")
-
-
-def build_payload(
-    duration_seconds: float,
-    force_fail: bool,
-    modified_files_count: int,
-    repository_name: str,
-    execution_time_seconds: float | None,
-) -> dict[str, object]:
-    payload: dict[str, object] = {
-        "duration_seconds": duration_seconds,
-        "force_fail": force_fail,
-        "modified_files_count": modified_files_count,
-        "repository_name": repository_name,
-    }
-    if execution_time_seconds is not None:
-        payload["execution_time_seconds"] = execution_time_seconds
-    return payload
-
-
-def send_task_notification(
-    api_url: str,
-    payload: dict[str, object],
-    dry_run: bool = False,
-) -> int:
-    body = json.dumps(payload, ensure_ascii=False)
-    curl_bin = resolve_curl_binary()
-    command = [
-        curl_bin,
-        "-sS",
-        "-X",
-        "POST",
-        api_url,
-        "-H",
-        "Content-Type: application/json",
-        "-d",
-        body,
-    ]
-
-    print("[notify] curl command:")
-    print(" ".join(shlex.quote(part) for part in command))
-
-    if dry_run:
-        print("[notify] dry-run activo. No se envia request.")
-        return 0
-
-    result = subprocess.run(
-        command,
-        cwd=PROJECT_ROOT,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if result.stdout:
-        print(result.stdout.strip())
-    if result.stderr:
-        print(result.stderr.strip(), file=sys.stderr)
-
-    return result.returncode
+from notify_common import build_payload, default_repository_name, send_task_notification
 
 
 def parse_args() -> argparse.Namespace:
@@ -128,6 +38,16 @@ def parse_args() -> argparse.Namespace:
         help="Tiempo real de ejecucion a reportar.",
     )
     parser.add_argument(
+        "--start-datetime",
+        default=None,
+        help="Fecha/hora de inicio en UTC ISO 8601. Ej: 2026-02-17T21:34:10Z",
+    )
+    parser.add_argument(
+        "--end-datetime",
+        default=None,
+        help="Fecha/hora de fin en UTC ISO 8601. Ej: 2026-02-17T21:35:02Z",
+    )
+    parser.add_argument(
         "--duration-seconds",
         type=float,
         default=0.0,
@@ -147,7 +67,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    settings = load_settings()
     args = parse_args()
 
     modified_files_count = args.modified_files_count
@@ -161,13 +80,15 @@ def main() -> int:
         print("ERROR: --execution-time-seconds no puede ser negativo.", file=sys.stderr)
         return 2
 
-    repository_name = args.repository_name.strip() or detect_repository_name(settings.repository_name)
+    repository_name = args.repository_name.strip() or default_repository_name()
     payload = build_payload(
         duration_seconds=args.duration_seconds,
         force_fail=args.force_fail,
         modified_files_count=modified_files_count,
         repository_name=repository_name,
         execution_time_seconds=args.execution_time_seconds,
+        start_datetime=args.start_datetime,
+        end_datetime=args.end_datetime,
     )
     return send_task_notification(api_url=args.api_url, payload=payload, dry_run=args.dry_run)
 

@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime, timezone
 import fnmatch
 import hashlib
 import os
@@ -12,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from notify_task import build_payload, detect_repository_name, send_task_notification
+from notify_common import build_payload, detect_repository_name, send_task_notification
 from src.shared.config import load_settings
 
 DEFAULT_OPERATIONAL_EXCLUDE_PATTERNS = (
@@ -22,6 +23,11 @@ DEFAULT_OPERATIONAL_EXCLUDE_PATTERNS = (
     ".last_chat_id",
     ".last_chat_id.tmp",
 )
+MIN_REPORTED_EXECUTION_SECONDS = 0.01
+
+
+def iso_utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _git_paths(args: list[str]) -> list[str] | None:
@@ -242,6 +248,7 @@ def main() -> int:
             print("[codex-run] Advertencia: no se pudo iniciar deteccion git. Se intentara continuar.", file=sys.stderr)
 
     started_at = time.perf_counter()
+    started_at_iso = iso_utc_now()
     codex_exit_code = 0
 
     process = None
@@ -344,13 +351,16 @@ def main() -> int:
                 )
 
             if is_iteration_stable:
-                elapsed_seconds = now - started_at
+                elapsed_seconds = max(now - started_at, MIN_REPORTED_EXECUTION_SECONDS)
+                end_datetime_iso = iso_utc_now()
                 payload = build_payload(
                     duration_seconds=args.duration_seconds,
                     force_fail=False,
                     modified_files_count=changed_files_count,
                     repository_name=repository_name,
                     execution_time_seconds=elapsed_seconds,
+                    start_datetime=started_at_iso,
+                    end_datetime=end_datetime_iso,
                 )
                 print(
                     "[codex-run] Iteracion estable detectada. "

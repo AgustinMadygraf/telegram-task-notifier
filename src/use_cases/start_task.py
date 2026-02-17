@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timezone
 import logging
 import time
 
@@ -8,6 +9,8 @@ from src.use_cases.ports import ChatStateGateway, TelegramNotificationGateway
 
 
 class StartTaskUseCase:
+    _MIN_REPORTED_EXECUTION_SECONDS = 0.01
+
     def __init__(
         self,
         chat_state_gateway: ChatStateGateway,
@@ -34,6 +37,14 @@ class StartTaskUseCase:
             return ""
         return repository_name.strip()
 
+    @staticmethod
+    def _format_datetime_utc(value: datetime | None) -> str | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
     def _build_notification_message(
         self,
         status_text: str,
@@ -41,20 +52,41 @@ class StartTaskUseCase:
         elapsed_seconds: float,
     ) -> str:
         modified_files_count = self._normalize_modified_files_count(task.modified_files_count)
-        files_line = f"Cantidad de archivos modificados: {modified_files_count}"
+        files_line = f"Archivos modificados: {modified_files_count}"
 
         repository_name = self._normalize_repository_name(task.repository_name)
         if not repository_name:
             repository_name = self._repository_name
 
         return "\n".join(
-            [
+            list(
+                filter(
+                    None,
+                    [
                 status_text,
                 f"Repositorio: {repository_name}",
                 f"Tiempo de ejecucion: {elapsed_seconds:.2f}s",
+                (
+                    f"Inicio: {self._format_datetime_utc(task.start_datetime)}"
+                    if task.start_datetime is not None
+                    else None
+                ),
+                (
+                    f"Fin: {self._format_datetime_utc(task.end_datetime)}"
+                    if task.end_datetime is not None
+                    else None
+                ),
                 files_line,
-            ]
+                    ],
+                )
+            )
         )
+
+    @classmethod
+    def _resolve_elapsed_seconds(cls, measured_seconds: float, provided_seconds: float | None) -> float:
+        if provided_seconds is not None and provided_seconds > 0:
+            return max(provided_seconds, cls._MIN_REPORTED_EXECUTION_SECONDS)
+        return max(measured_seconds, cls._MIN_REPORTED_EXECUTION_SECONDS)
 
     def start(self, request: TaskExecutionRequest) -> StartedTask:
         modified_files_count = self._normalize_modified_files_count(request.modified_files_count)
@@ -67,6 +99,8 @@ class StartTaskUseCase:
                 "modified_files_count": modified_files_count,
                 "repository_name": repository_name,
                 "execution_time_seconds": request.execution_time_seconds,
+                "start_datetime": self._format_datetime_utc(request.start_datetime),
+                "end_datetime": self._format_datetime_utc(request.end_datetime),
             },
         )
         chat_id = self._chat_state_gateway.get_last_chat_id()
@@ -89,6 +123,8 @@ class StartTaskUseCase:
             modified_files_count=modified_files_count,
             repository_name=repository_name or None,
             execution_time_seconds=request.execution_time_seconds,
+            start_datetime=request.start_datetime,
+            end_datetime=request.end_datetime,
         )
 
     async def run_task_and_notify(self, task: StartedTask) -> None:
@@ -107,15 +143,13 @@ class StartTaskUseCase:
             if task.force_fail:
                 raise RuntimeError("Falla forzada para prueba MVP.")
 
-            elapsed_seconds = time.perf_counter() - started_at
-            if task.execution_time_seconds is not None:
-                elapsed_seconds = task.execution_time_seconds
+            measured_seconds = time.perf_counter() - started_at
+            elapsed_seconds = self._resolve_elapsed_seconds(measured_seconds, task.execution_time_seconds)
             message = self._build_notification_message("Termin\u00e9", task, elapsed_seconds)
             await self._telegram_notification_gateway.send_message(task.chat_id, message)
         except Exception:
             self._logger.exception("La tarea fallo.")
-            elapsed_seconds = time.perf_counter() - started_at
-            if task.execution_time_seconds is not None:
-                elapsed_seconds = task.execution_time_seconds
+            measured_seconds = time.perf_counter() - started_at
+            elapsed_seconds = self._resolve_elapsed_seconds(measured_seconds, task.execution_time_seconds)
             message = self._build_notification_message("Fall\u00f3", task, elapsed_seconds)
             await self._telegram_notification_gateway.send_message(task.chat_id, message)

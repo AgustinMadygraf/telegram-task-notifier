@@ -111,7 +111,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "-d \"{\\\"duration_seconds\\\":2,\\\"force_fail\\\":false,"
                     "\\\"modified_files_count\\\":2,"
                     "\\\"repository_name\\\":\\\"telegram-task-notifier\\\","
-                    "\\\"execution_time_seconds\\\":42.5}\""
+                    "\\\"execution_time_seconds\\\":42.5,"
+                    "\\\"start_datetime\\\":\\\"2026-02-17T21:34:10Z\\\","
+                    "\\\"end_datetime\\\":\\\"2026-02-17T21:35:02Z\\\"}\""
                 ),
             }
 
@@ -128,6 +130,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             modified_files_count=payload.modified_files_count,
             repository_name=payload.repository_name,
             execution_time_seconds=payload.execution_time_seconds,
+            start_datetime=payload.start_datetime,
+            end_datetime=payload.end_datetime,
         )
 
         try:
