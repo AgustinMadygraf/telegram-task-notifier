@@ -52,11 +52,13 @@ jobs:
           fi
 
       - name: Deploy on VPS
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          SMTP_TO_DEFAULT: ${{ secrets.SMTP_TO_DEFAULT }}
         run: |
-          SMTP_HOST="${{ secrets.SMTP_HOST }}" \
-          SMTP_FROM="${{ secrets.SMTP_FROM }}" \
-          SMTP_TO_DEFAULT="${{ secrets.SMTP_TO_DEFAULT }}" \
-          ssh -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" << 'EOF'
+          ssh -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "SMTP_HOST='${SMTP_HOST}' SMTP_FROM='${SMTP_FROM}' SMTP_TO_DEFAULT='${SMTP_TO_DEFAULT}' bash -s" << 'EOF'
           set -e
           cd "${{ secrets.VPS_APP_DIR }}"
           git pull --ff-only
