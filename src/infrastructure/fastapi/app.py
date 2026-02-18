@@ -148,6 +148,13 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
         )
     )
 
+    @fastapi_app.get("/")
+    async def root() -> dict[str, str]:
+        return {
+            "service": "datamaq-communications-api",
+            "status": "ok",
+        }
+
     @fastapi_app.middleware("http")
     async def request_id_middleware(request: Request, call_next: Any) -> JSONResponse:
         incoming_request_id = request.headers.get("X-Request-Id", "").strip()
