@@ -205,5 +205,31 @@ jobs:
             exit 1
           fi
 
+          contact_payload='{"name":"Smoke Test","email":"smoke@datamaq.com.ar","message":"smoke deploy check","meta":{"source":"deploy-workflow"},"attribution":{"website":""}}'
+
+          echo "Running local contact POST check (expect 202)..."
+          local_contact_status=$(curl -sS -o /tmp/local_contact_body.txt -w "%{http_code}" -X POST \
+            http://127.0.0.1:8000/contact \
+            -H "Content-Type: application/json" \
+            -d "${contact_payload}")
+          echo "Local contact status=${local_contact_status}"
+          if [ "${local_contact_status}" != "202" ]; then
+            echo "Local contact POST check failed"
+            cat /tmp/local_contact_body.txt || true
+            exit 1
+          fi
+
+          echo "Running public contact POST check (expect 202)..."
+          public_contact_status=$(curl -sS -o /tmp/public_contact_body.txt -w "%{http_code}" -X POST \
+            https://api.datamaq.com.ar/contact \
+            -H "Content-Type: application/json" \
+            -d "${contact_payload}")
+          echo "Public contact status=${public_contact_status}"
+          if [ "${public_contact_status}" != "202" ]; then
+            echo "Public contact POST check failed"
+            cat /tmp/public_contact_body.txt || true
+            exit 1
+          fi
+
           echo "Deploy validation OK"
           EOF
