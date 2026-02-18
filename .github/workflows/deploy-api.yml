@@ -81,42 +81,40 @@ jobs:
         run: |
           set -euo pipefail
           echo "Connecting to VPS host=${{ secrets.VPS_HOST }} port=${{ secrets.VPS_PORT }} user=${{ secrets.VPS_USER }}"
+
+          ARCHIVE_NAME="datamaq-communications-api.tar.gz"
+          echo "Packing workspace on runner..."
+          tar \
+            --exclude=.git \
+            --exclude=.env \
+            --exclude='.env.bak*' \
+            --exclude='**/__pycache__' \
+            --exclude='.pytest_cache' \
+            -czf "/tmp/${ARCHIVE_NAME}" .
+
+          echo "Uploading workspace archive to VPS..."
+          scp -P "${{ secrets.VPS_PORT }}" \
+            "/tmp/${ARCHIVE_NAME}" \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/${ARCHIVE_NAME}"
+
           ssh -A -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
             "SMTP_HOST='${SMTP_HOST}' SMTP_FROM='${SMTP_FROM}' SMTP_TO_DEFAULT='${SMTP_TO_DEFAULT}' bash -s" << 'EOF'
           set -euo pipefail
           echo "Remote preflight started"
           echo "host=$(hostname) user=$(whoami)"
+          mkdir -p "${{ secrets.VPS_APP_DIR }}"
           cd "${{ secrets.VPS_APP_DIR }}"
           echo "pwd=$(pwd)"
           ls -la | head -n 30
 
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          if ! grep -q "github.com" ~/.ssh/known_hosts 2>/dev/null; then
-            ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-          fi
-          chmod 600 ~/.ssh/known_hosts 2>/dev/null || true
-
-          echo "Testing GitHub SSH from VPS..."
-          ssh -o StrictHostKeyChecking=accept-new -T git@github.com || true
-
-          if ! GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git ls-remote --heads origin >/dev/null 2>&1; then
-            echo "GitHub SSH auth failed on VPS (git ls-remote)."
-            echo "Ensure one of these is configured:"
-            echo "1) VPS user has a private key authorized for the repo, or"
-            echo "2) GitHub secret GITHUB_DEPLOY_KEY is configured and ssh agent forwarding is allowed on VPS."
-            echo "Current git remote config:"
-            git remote -v || true
+          if [ -f /tmp/datamaq-communications-api.tar.gz ]; then
+            echo "Extracting uploaded archive..."
+            tar -xzf /tmp/datamaq-communications-api.tar.gz -C "${{ secrets.VPS_APP_DIR }}"
+            rm -f /tmp/datamaq-communications-api.tar.gz
+          else
+            echo "Uploaded archive not found on VPS"
             exit 1
           fi
-
-          echo "Git auth check OK"
-          echo "Current commit before pull:"
-          git rev-parse --short HEAD || true
-
-          GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull --ff-only
-          echo "Current commit after pull:"
-          git rev-parse --short HEAD || true
 
           if [ ! -f .env ]; then
             cp .env.production.example .env
