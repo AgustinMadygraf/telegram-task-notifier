@@ -95,4 +95,6 @@ def test_workflow_deploy_uses_ssh_agent_with_secret() -> None:
 
     with_section = ssh_step.get("with", {})
     assert isinstance(with_section, dict)
-    assert with_section.get("ssh-private-key") == "${{ secrets.VPS_SSH_KEY }}"
+    ssh_private_key = with_section.get("ssh-private-key", "")
+    assert isinstance(ssh_private_key, str)
+    assert "${{ secrets.VPS_SSH_KEY }}" in ssh_private_key

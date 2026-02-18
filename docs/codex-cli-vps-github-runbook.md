@@ -36,6 +36,7 @@ Verificar que existan y estén completos:
 - `VPS_APP_DIR`
 - `VPS_SSH_KEY`
 - `VPS_KNOWN_HOSTS` (opcional)
+- `GITHUB_DEPLOY_KEY` (opcional, recomendado si el VPS no tiene key propia para `git@github.com`)
 - `SMTP_HOST`
 - `SMTP_FROM`
 - `SMTP_TO_DEFAULT`
@@ -200,6 +201,14 @@ curl -i -X POST https://api.datamaq.com.ar/contact -H "Content-Type: application
 - Acción:
   - cargar `SMTP_HOST`, `SMTP_FROM`, `SMTP_TO_DEFAULT` en GitHub Secrets.
   - rerun de workflow.
+
+### 1.b) `Permission denied (publickey)` en `git pull` remoto
+
+- Causa: el VPS no tiene identidad SSH válida para leer el repo en GitHub.
+- Acción:
+  - cargar `GITHUB_DEPLOY_KEY` en GitHub Secrets (private key con deploy key de lectura en el repo), o
+  - configurar llave SSH del usuario de VPS con acceso al repo.
+  - validar en VPS: `git ls-remote --heads origin`.
 
 ### 2) `404 /contact` o `404 /mail` en dominio real
 
