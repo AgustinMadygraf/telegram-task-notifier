@@ -34,7 +34,7 @@ from src.use_cases.start_task import StartTaskUseCase
 from src.use_cases.submit_contact import SubmitContactUseCase
 
 configure_logging()
-logger = get_logger("telegram-task-notifier")
+logger = get_logger("datamaq-communications-api")
 
 _CONTACT_PATHS = {"/contact", "/mail"}
 
@@ -129,7 +129,7 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
     )
     tasks_controller = TasksController(start_task_use_case=start_task_use_case)
 
-    fastapi_app = FastAPI(title="Telegram Task Notifier MVP")
+    fastapi_app = FastAPI(title="Datamaq Communications API")
     fastapi_app.add_middleware(
         CORSMiddleware,
         allow_origins=list(effective_settings.cors_allowed_origins),
@@ -206,7 +206,7 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
                     "-H \"Content-Type: application/json\" "
                     "-d \"{\\\"duration_seconds\\\":2,\\\"force_fail\\\":false,"
                     "\\\"modified_files_count\\\":2,"
-                    "\\\"repository_name\\\":\\\"telegram-task-notifier\\\","
+                    "\\\"repository_name\\\":\\\"datamaq-communications-api\\\","
                     "\\\"execution_time_seconds\\\":42.5,"
                     "\\\"start_datetime\\\":\\\"2026-02-17T21:34:10Z\\\","
                     "\\\"end_datetime\\\":\\\"2026-02-17T21:35:02Z\\\"}\""

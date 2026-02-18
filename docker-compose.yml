@@ -1,7 +1,7 @@
 services:
   api:
     build: .
-    container_name: telegram-notifier-api
+    container_name: datamaq-communications-api
     restart: unless-stopped
     env_file:
       - .env

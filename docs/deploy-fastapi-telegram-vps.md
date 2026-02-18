@@ -9,7 +9,7 @@ Fecha: 2026-02-17
 
 ## Supuestos
 
-1. El codigo vive en el VPS (ejemplo: `/opt/telegram-task-notifier`).
+1. El codigo vive en el VPS (ejemplo: `/opt/datamaq-communications-api`).
 2. Nginx del host ya esta operativo.
 3. El dominio `datamaq.com.ar` resuelve al VPS.
 
@@ -108,7 +108,7 @@ curl "https://api.telegram.org/bot<TELEGRAM_TOKEN>/getWebhookInfo"
 Deploy:
 
 ```bash
-cd /opt/telegram-task-notifier
+cd /opt/datamaq-communications-api
 git pull --ff-only
 docker compose up -d --build
 ```

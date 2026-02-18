@@ -19,7 +19,7 @@ def _base_settings() -> Settings:
         auto_set_webhook=False,
         drop_pending_updates=True,
         telegram_webhook_path="/telegram/webhook",
-        repository_name="telegram-task-notifier",
+        repository_name="datamaq-communications-api",
         telegram_chat_id=None,
         telegram_token="",
         telegram_webhook_secret="",

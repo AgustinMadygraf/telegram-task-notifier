@@ -1,4 +1,4 @@
-# Telegram Task Notifier MVP
+# Datamaq Communications API
 
 MVP local con FastAPI + Telegram webhook expuesto por ngrok, todo iniciado desde `run.py`.
 

@@ -56,7 +56,7 @@ Comportamiento:
 ## Rollback
 
 ```bash
-cd /opt/telegram-task-notifier
+cd /opt/datamaq-communications-api
 git log --oneline -n 5
 git checkout <commit_anterior>
 docker compose up -d --build
