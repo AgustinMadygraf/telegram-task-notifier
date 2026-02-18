@@ -61,7 +61,15 @@ jobs:
             "SMTP_HOST='${SMTP_HOST}' SMTP_FROM='${SMTP_FROM}' SMTP_TO_DEFAULT='${SMTP_TO_DEFAULT}' bash -s" << 'EOF'
           set -e
           cd "${{ secrets.VPS_APP_DIR }}"
-          git pull --ff-only
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if ! grep -q "github.com" ~/.ssh/known_hosts 2>/dev/null; then
+            ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+          fi
+          chmod 600 ~/.ssh/known_hosts 2>/dev/null || true
+
+          GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull --ff-only
 
           if [ ! -f .env ]; then
             cp .env.production.example .env
