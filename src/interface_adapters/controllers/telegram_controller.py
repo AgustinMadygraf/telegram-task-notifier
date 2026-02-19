@@ -17,10 +17,13 @@ class TelegramController:
         self._process_webhook_use_case = process_webhook_use_case
         self._get_last_chat_use_case = get_last_chat_use_case
 
-    def handle_webhook(self, update: dict[str, Any], provided_secret: str | None) -> dict[str, Any]:
+    def handle_webhook(
+        self, update: dict[str, Any], provided_secret: str | None, request_id: str = ""
+    ) -> dict[str, Any]:
         captured_chat_id = self._process_webhook_use_case.execute(
             update=update,
             provided_secret=provided_secret,
+            request_id=request_id,
         )
         return present_webhook_result(captured_chat_id)
 

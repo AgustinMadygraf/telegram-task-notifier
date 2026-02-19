@@ -22,7 +22,7 @@ class DummyProcessWebhookUseCase:
         self.result = result
         self.calls: list[tuple[dict[str, object], str | None]] = []
 
-    def execute(self, update: dict[str, object], provided_secret: str | None) -> int | None:
+    def execute(self, update: dict[str, object], provided_secret: str | None, request_id: str = "") -> int | None:
         self.calls.append((update, provided_secret))
         return self.result
 

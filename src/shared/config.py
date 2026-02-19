@@ -92,6 +92,10 @@ class Settings:  # pylint: disable=too-many-instance-attributes
     rate_limit_window: int
     rate_limit_max: int
     honeypot_field: str
+    http_log_healthchecks: bool
+    debug_contact_observability: bool
+    debug_telegram_webhook: bool
+    mask_sensitive_ids: bool
 
 
 def validate_startup_settings(settings: Settings) -> None:  # pylint: disable=too-many-branches
@@ -177,4 +181,8 @@ def load_settings() -> Settings:
         rate_limit_window=parse_int(os.getenv("RATE_LIMIT_WINDOW", "60"), 60),
         rate_limit_max=parse_int(os.getenv("RATE_LIMIT_MAX", "20"), 20),
         honeypot_field=os.getenv("HONEYPOT_FIELD", "website").strip() or "website",
+        http_log_healthchecks=parse_bool(os.getenv("HTTP_LOG_HEALTHCHECKS", "false"), False),
+        debug_contact_observability=parse_bool(os.getenv("DEBUG_CONTACT_OBSERVABILITY", "false"), False),
+        debug_telegram_webhook=parse_bool(os.getenv("DEBUG_TELEGRAM_WEBHOOK", "false"), False),
+        mask_sensitive_ids=parse_bool(os.getenv("MASK_SENSITIVE_IDS", "true"), True),
     )

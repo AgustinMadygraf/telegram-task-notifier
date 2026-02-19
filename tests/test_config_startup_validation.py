@@ -39,6 +39,10 @@ def _base_settings() -> Settings:
         rate_limit_window=60,
         rate_limit_max=20,
         honeypot_field="website",
+        http_log_healthchecks=False,
+        debug_contact_observability=False,
+        debug_telegram_webhook=False,
+        mask_sensitive_ids=True,
     )
 
 
