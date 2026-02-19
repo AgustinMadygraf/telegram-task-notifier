@@ -36,4 +36,3 @@ class ProcessTelegramWebhookUseCase:
             self._logger.info("Webhook sin chat_id extraible. keys=%s", list(update.keys()))
 
         return chat_id
-

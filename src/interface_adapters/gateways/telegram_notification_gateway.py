@@ -5,8 +5,7 @@ from src.use_cases.ports import TelegramNotificationGateway
 
 
 class TelegramMessageClient(Protocol):
-    async def send_message(self, chat_id: int, text: str) -> None:
-        ...
+    async def send_message(self, chat_id: int, text: str) -> None: ...
 
 
 class HttpxTelegramNotificationGateway(TelegramNotificationGateway):

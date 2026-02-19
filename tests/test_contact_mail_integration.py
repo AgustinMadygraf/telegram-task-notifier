@@ -16,9 +16,9 @@ def _configure_env() -> None:
     os.environ["SMTP_TLS"] = "false"
     os.environ["SMTP_FROM"] = "no-reply@datamaq.com.ar"
     os.environ["SMTP_TO_DEFAULT"] = "ops@datamaq.com.ar"
-    os.environ[
-        "CORS_ALLOWED_ORIGINS"
-    ] = "https://datamaq.com.ar,https://www.datamaq.com.ar,http://localhost:5173,http://127.0.0.1:5173"
+    os.environ["CORS_ALLOWED_ORIGINS"] = (
+        "https://datamaq.com.ar,https://www.datamaq.com.ar,http://localhost:5173,http://127.0.0.1:5173"
+    )
     os.environ["RATE_LIMIT_WINDOW"] = "60"
     os.environ["RATE_LIMIT_MAX"] = "1"
     os.environ["HONEYPOT_FIELD"] = "website"

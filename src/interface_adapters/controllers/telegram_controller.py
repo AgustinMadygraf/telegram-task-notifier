@@ -26,4 +26,3 @@ class TelegramController:
 
     def handle_last_chat(self) -> dict[str, Any]:
         return present_last_chat(self._get_last_chat_use_case.execute())
-

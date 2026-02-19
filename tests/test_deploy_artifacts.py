@@ -52,6 +52,7 @@ def test_workflow_structure_and_triggers() -> None:
     assert isinstance(jobs, dict), "Workflow jobs: section missing or invalid"
     required_jobs = {
         "build_tests",
+        "build_lint",
         "build_image",
         "build_gate",
         "deploy_prepare",
@@ -78,7 +79,7 @@ def test_workflow_build_and_deploy_dag_semantics() -> None:
     build_gate = jobs.get("build_gate", {})
     build_gate_needs = build_gate.get("needs", [])
     assert isinstance(build_gate_needs, list)
-    assert set(build_gate_needs) == {"build_tests", "build_image"}
+    assert set(build_gate_needs) == {"build_tests", "build_lint", "build_image"}
 
     deploy_prepare = jobs.get("deploy_prepare", {})
     assert deploy_prepare.get("needs") == "build_gate"

@@ -231,7 +231,6 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
         )
         return response
 
-
     @fastapi_app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
         raw_body = await request.body()
@@ -264,13 +263,13 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
                 "hint": (
                     "JSON invalido. En CMD usa: "
                     "curl -X POST http://127.0.0.1:8000/tasks/start "
-                    "-H \"Content-Type: application/json\" "
-                    "-d \"{\\\"duration_seconds\\\":2,\\\"force_fail\\\":false,"
-                    "\\\"modified_files_count\\\":2,"
-                    "\\\"repository_name\\\":\\\"datamaq-communications-api\\\","
-                    "\\\"execution_time_seconds\\\":42.5,"
-                    "\\\"start_datetime\\\":\\\"2026-02-17T21:34:10Z\\\","
-                    "\\\"end_datetime\\\":\\\"2026-02-17T21:35:02Z\\\"}\""
+                    '-H "Content-Type: application/json" '
+                    '-d "{\\"duration_seconds\\":2,\\"force_fail\\":false,'
+                    '\\"modified_files_count\\":2,'
+                    '\\"repository_name\\":\\"datamaq-communications-api\\",'
+                    '\\"execution_time_seconds\\":42.5,'
+                    '\\"start_datetime\\":\\"2026-02-17T21:34:10Z\\",'
+                    '\\"end_datetime\\":\\"2026-02-17T21:35:02Z\\"}"'
                 ),
             }
 

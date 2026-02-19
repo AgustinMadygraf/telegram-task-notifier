@@ -17,4 +17,3 @@ class TasksController:
         task = self._start_task_use_case.start(request)
         schedule_background_task(task)
         return present_task_started(task)
-

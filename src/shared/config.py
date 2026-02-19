@@ -151,8 +151,7 @@ def load_settings() -> Settings:
         ngrok_domain=os.getenv("NGROK_DOMAIN", "").strip(),
         auto_set_webhook=parse_bool(os.getenv("AUTO_SET_WEBHOOK", "true"), True),
         drop_pending_updates=parse_bool(os.getenv("DROP_PENDING_UPDATES", "true"), True),
-        telegram_webhook_path=os.getenv("TELEGRAM_WEBHOOK_PATH", "/telegram/webhook").strip()
-        or "/telegram/webhook",
+        telegram_webhook_path=os.getenv("TELEGRAM_WEBHOOK_PATH", "/telegram/webhook").strip() or "/telegram/webhook",
         repository_name=os.getenv("REPOSITORY_NAME", project_root.name).strip() or project_root.name,
         telegram_chat_id=parse_optional_int(os.getenv("TELEGRAM_CHAT_ID", "")),
         telegram_token=os.getenv("TELEGRAM_TOKEN", "").strip(),

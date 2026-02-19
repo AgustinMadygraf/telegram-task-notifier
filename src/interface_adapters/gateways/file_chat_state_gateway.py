@@ -53,4 +53,3 @@ class FileChatStateGateway(ChatStateGateway):
             self._logger.info("last_chat_id persistido en archivo: %s", chat_id)
         except OSError:
             self._logger.exception("No se pudo persistir last_chat_id en %s", self._state_file_path)
-

@@ -17,4 +17,3 @@ def extract_chat_id(update: dict[str, Any]) -> Optional[int]:
                 return chat["id"]
 
     return None
-

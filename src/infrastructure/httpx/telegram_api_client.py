@@ -39,4 +39,3 @@ class TelegramApiClient:
                     )
         except httpx.HTTPError:
             self._logger.exception("Error llamando a Telegram sendMessage")
-

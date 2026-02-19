@@ -63,20 +63,20 @@ class StartTaskUseCase:
                 filter(
                     None,
                     [
-                status_text,
-                f"Repositorio: {repository_name}",
-                f"Tiempo de ejecucion: {elapsed_seconds:.2f}s",
-                (
-                    f"Inicio: {self._format_datetime_utc(task.start_datetime)}"
-                    if task.start_datetime is not None
-                    else None
-                ),
-                (
-                    f"Fin: {self._format_datetime_utc(task.end_datetime)}"
-                    if task.end_datetime is not None
-                    else None
-                ),
-                files_line,
+                        status_text,
+                        f"Repositorio: {repository_name}",
+                        f"Tiempo de ejecucion: {elapsed_seconds:.2f}s",
+                        (
+                            f"Inicio: {self._format_datetime_utc(task.start_datetime)}"
+                            if task.start_datetime is not None
+                            else None
+                        ),
+                        (
+                            f"Fin: {self._format_datetime_utc(task.end_datetime)}"
+                            if task.end_datetime is not None
+                            else None
+                        ),
+                        files_line,
                     ],
                 )
             )

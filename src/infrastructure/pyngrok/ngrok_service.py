@@ -28,4 +28,3 @@ class NgrokService:
             ngrok.kill()
         except Exception:
             pass
-

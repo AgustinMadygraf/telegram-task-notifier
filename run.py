@@ -17,7 +17,9 @@ def _normalize_webhook_path(path: str) -> str:
     return clean
 
 
-def _wait_for_server_started(server: uvicorn.Server, server_thread: threading.Thread, timeout_seconds: float = 20.0) -> bool:
+def _wait_for_server_started(
+    server: uvicorn.Server, server_thread: threading.Thread, timeout_seconds: float = 20.0
+) -> bool:
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
         if server.started:

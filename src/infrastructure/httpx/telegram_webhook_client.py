@@ -34,4 +34,3 @@ class TelegramWebhookClient:
             response = client.get(endpoint)
             response.raise_for_status()
             return response.json()
-

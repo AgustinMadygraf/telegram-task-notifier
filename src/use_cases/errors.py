@@ -16,4 +16,3 @@ class RateLimitExceededError(Exception):
 
 class MailDeliveryError(Exception):
     """Raised when the mail gateway cannot deliver a message."""
-

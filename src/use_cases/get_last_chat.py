@@ -12,4 +12,3 @@ class GetLastChatUseCase:
         last_chat_id = self._chat_state_gateway.get_last_chat_id()
         self._logger.info("Consulta last_chat_id -> %s", last_chat_id)
         return last_chat_id
-
