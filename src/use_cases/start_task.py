@@ -58,16 +58,8 @@ class StartTaskUseCase:
                         status_text,
                         f"Repositorio: {repository_name}",
                         f"Tiempo de ejecucion: {elapsed_seconds:.2f}s",
-                        (
-                            f"Inicio: {to_utc_iso(task.start_datetime)}"
-                            if task.start_datetime is not None
-                            else None
-                        ),
-                        (
-                            f"Fin: {to_utc_iso(task.end_datetime)}"
-                            if task.end_datetime is not None
-                            else None
-                        ),
+                        (f"Inicio: {to_utc_iso(task.start_datetime)}" if task.start_datetime is not None else None),
+                        (f"Fin: {to_utc_iso(task.end_datetime)}" if task.end_datetime is not None else None),
                         files_line,
                     ],
                 )
