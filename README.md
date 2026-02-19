@@ -20,6 +20,10 @@ Incluye endpoints de contacto/email (`POST /contact`, `POST /mail`) con respuest
   - `PROXY_HEADERS_ENABLED` (opcional; default `true`)
   - `FORWARDED_ALLOW_IPS` (opcional; default `*`)
   - `CORS_ALLOWED_ORIGINS` (obligatorio; lista separada por comas)
+  - `HTTP_LOG_HEALTHCHECKS` (opcional; default `false`; evita ruido de `/` y `/health`)
+  - `DEBUG_CONTACT_OBSERVABILITY` (opcional; default `false`; señales de payload sin PII en `/contact` y `/mail`)
+  - `DEBUG_TELEGRAM_WEBHOOK` (opcional; default `false`; trazas adicionales de `/telegram/webhook`)
+  - `MASK_SENSITIVE_IDS` (opcional; default `true`; enmascara IDs/emails en logs)
   - `SMTP_HOST` (obligatorio)
   - `SMTP_PORT` (obligatorio; entero > 0)
   - `SMTP_USER` (opcional)
@@ -88,6 +92,7 @@ Incluye endpoints de contacto/email (`POST /contact`, `POST /mail`) con respuest
   - Aplica anti-spam con honeypot (`HONEYPOT_FIELD`) y rate-limit (`RATE_LIMIT_WINDOW`, `RATE_LIMIT_MAX`).
   - Error uniforme: `{ request_id, error: { code, message } }` con `400/422/429/500`.
   - CORS expone métodos `POST` y `OPTIONS`.
+  - Con `DEBUG_CONTACT_OBSERVABILITY=true` agrega señales de depuración no sensibles.
 
 - `POST /mail`
   - Mismo contrato de request/response que `POST /contact`.
@@ -97,10 +102,12 @@ Incluye endpoints de contacto/email (`POST /contact`, `POST /mail`) con respuest
 - `POST /telegram/webhook`
   - Recibe updates de Telegram y guarda `last_chat_id`.
   - Si `TELEGRAM_WEBHOOK_SECRET` esta configurado, valida `X-Telegram-Bot-Api-Secret-Token`.
+  - Con `DEBUG_TELEGRAM_WEBHOOK=true` agrega trazas adicionales por `update_id` y `request_id`.
 
 - `GET /health` (y alias `GET /`)
   - Healthcheck de servicio.
   - Responde `200` con `{ service, status }`.
+  - Si `HTTP_LOG_HEALTHCHECKS=false`, no genera `http_request` para healthchecks.
 
 - `GET /telegram/last_chat`
   - Debug de `last_chat_id`.
@@ -179,6 +186,18 @@ Pasos rapidos en VPS:
 5. Emitir SSL:
    - `certbot --nginx -d api.datamaq.com.ar`
 6. Configurar webhook en Telegram (`setWebhook`) con `secret_token`.
+
+## Operación de depuración (producción)
+
+- Mantener por defecto:
+  - `APP_ENV=production`
+  - `HTTP_LOG_HEALTHCHECKS=false`
+  - `DEBUG_CONTACT_OBSERVABILITY=false`
+  - `DEBUG_TELEGRAM_WEBHOOK=false`
+  - `MASK_SENSITIVE_IDS=true`
+- Para incidentes:
+  - Activar temporalmente `DEBUG_CONTACT_OBSERVABILITY=true` y/o `DEBUG_TELEGRAM_WEBHOOK=true`.
+  - Volver a `false` al cerrar el incidente.
 
 ## Checklist post-rename (GitHub repo)
 
