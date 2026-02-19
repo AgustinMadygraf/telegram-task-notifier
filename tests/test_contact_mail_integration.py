@@ -52,6 +52,17 @@ def _valid_payload() -> dict[str, object]:
     }
 
 
+def test_health_endpoints_return_ok() -> None:
+    with _client() as api_client:
+        root_response = api_client.get("/")
+        health_response = api_client.get("/health")
+
+    assert root_response.status_code == 200
+    assert health_response.status_code == 200
+    assert root_response.json()["status"] == "ok"
+    assert health_response.json() == root_response.json()
+
+
 def test_contact_returns_202() -> None:
     with _client() as api_client:
         response = api_client.post("/contact", json=_valid_payload())

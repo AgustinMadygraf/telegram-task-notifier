@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from src.entities.task import TaskExecutionRequest
 from src.infrastructure.fastapi.contact_router import create_contact_router
+from src.infrastructure.fastapi.health_router import create_health_router
 from src.infrastructure.fastapi.schemas import TaskStartRequestModel
 from src.infrastructure.rate_limit.in_memory_rate_limiter_gateway import InMemoryRateLimiterGateway
 from src.infrastructure.request_id.context_request_id_provider import (
@@ -18,6 +19,7 @@ from src.infrastructure.request_id.context_request_id_provider import (
 )
 from src.infrastructure.httpx.telegram_api_client import TelegramApiClient
 from src.infrastructure.smtp.smtp_mail_gateway import SmtpMailGateway
+from src.interface_adapters.controllers.health_controller import HealthController
 from src.interface_adapters.controllers.tasks_controller import TasksController
 from src.interface_adapters.controllers.telegram_controller import TelegramController
 from src.interface_adapters.gateways.file_chat_state_gateway import FileChatStateGateway
@@ -27,6 +29,7 @@ from src.interface_adapters.gateways.telegram_notification_gateway import (
 from src.shared.config import Settings, load_settings, validate_startup_settings
 from src.shared.logger import configure_logging, get_logger
 from src.use_cases.errors import InvalidTelegramSecretError, LastChatNotAvailableError
+from src.use_cases.get_health import GetHealthUseCase
 from src.use_cases.get_last_chat import GetLastChatUseCase
 from src.use_cases.process_telegram_webhook import ProcessTelegramWebhookUseCase
 from src.use_cases.send_mail import SendMailUseCase
@@ -37,6 +40,7 @@ configure_logging()
 logger = get_logger("datamaq-communications-api")
 
 _CONTACT_PATHS = {"/contact", "/mail"}
+_SERVICE_NAME = "datamaq-communications-api"
 
 
 def _request_id_from_state(request: Request) -> str:
@@ -122,7 +126,9 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
         rate_limit_window=effective_settings.rate_limit_window,
         rate_limit_max=effective_settings.rate_limit_max,
     )
+    get_health_use_case = GetHealthUseCase(service_name=_SERVICE_NAME, logger=logger)
 
+    health_controller = HealthController(get_health_use_case=get_health_use_case)
     telegram_controller = TelegramController(
         process_webhook_use_case=process_webhook_use_case,
         get_last_chat_use_case=get_last_chat_use_case,
@@ -140,6 +146,7 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
 
     fastapi_app.state.send_mail_use_case = send_mail_use_case
     fastapi_app.state.submit_contact_use_case = submit_contact_use_case
+    fastapi_app.include_router(create_health_router(health_controller))
     fastapi_app.include_router(
         create_contact_router(
             submit_contact_use_case=submit_contact_use_case,
@@ -147,13 +154,6 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
             logger=logger,
         )
     )
-
-    @fastapi_app.get("/")
-    async def root() -> dict[str, str]:
-        return {
-            "service": "datamaq-communications-api",
-            "status": "ok",
-        }
 
     @fastapi_app.middleware("http")
     async def request_id_middleware(request: Request, call_next: Any) -> JSONResponse:
@@ -266,4 +266,5 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
 
 
 default_settings = load_settings()
+settings = default_settings
 app = create_app(default_settings)

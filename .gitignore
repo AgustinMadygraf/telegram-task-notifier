@@ -4,3 +4,4 @@ ngrok.log
 server.log
 .last_chat_id
 .last_chat_id.tmp
+.coverage

@@ -28,6 +28,10 @@ Configurar en `Settings > Secrets and variables > Actions`:
 
 Archivo: `.github/workflows/deploy-api.yml`
 
+Checklist operativo por jobs:
+
+- `docs/deploy-api-workflow-checklist.md`
+
 Comportamiento:
 
 1. Job `ci`:

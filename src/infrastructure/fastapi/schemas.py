@@ -14,6 +14,11 @@ class TaskStartRequestModel(BaseModel):
     end_datetime: datetime | None = Field(default=None)
 
 
+class HealthResponseModel(BaseModel):
+    service: str
+    status: str
+
+
 class ContactRequestModel(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     email: str = Field(

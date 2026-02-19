@@ -45,8 +45,8 @@ Incluye endpoints de contacto/email (`POST /contact`, `POST /mail`) con respuest
    - `scripts\run_server.bat`
    - o `python run.py`
 
-3. Verifica el estado de chat:
-   - `curl http://127.0.0.1:8000/telegram/last_chat`
+3. Verifica salud de API:
+   - `curl http://127.0.0.1:8000/health`
 
 4. Dispara una tarea de ejemplo:
    - PowerShell:
@@ -94,6 +94,10 @@ Incluye endpoints de contacto/email (`POST /contact`, `POST /mail`) con respuest
 - `POST /telegram/webhook`
   - Recibe updates de Telegram y guarda `last_chat_id`.
   - Si `TELEGRAM_WEBHOOK_SECRET` esta configurado, valida `X-Telegram-Bot-Api-Secret-Token`.
+
+- `GET /health` (y alias `GET /`)
+  - Healthcheck de servicio.
+  - Responde `200` con `{ service, status }`.
 
 - `GET /telegram/last_chat`
   - Debug de `last_chat_id`.
@@ -165,7 +169,7 @@ Pasos rapidos en VPS:
 2. Levantar contenedor:
    - `docker compose up -d --build`
 3. Validar API local:
-   - `curl http://127.0.0.1:8000/telegram/last_chat`
+   - `curl http://127.0.0.1:8000/health`
 4. Instalar bloque Nginx y recargar:
    - `nginx -t`
    - `systemctl reload nginx`
@@ -186,7 +190,7 @@ Luego de renombrar el repositorio en GitHub, validar:
 3. Deploy:
   - Ejecutar workflow `Deploy API to VPS`.
 4. Smoke tests:
-  - `curl -i https://api.datamaq.com.ar/telegram/last_chat` -> `200`.
+  - `curl -i https://api.datamaq.com.ar/health` -> `200`.
   - `curl -i -X OPTIONS https://api.datamaq.com.ar/contact -H "Origin: https://datamaq.com.ar" -H "Access-Control-Request-Method: POST"` -> `200`.
   - `POST /contact` y `POST /mail` -> `202`.
 
@@ -194,3 +198,4 @@ Documentacion operativa relacionada:
 
 - `docs/deploy-fastapi-telegram-vps.md`
 - `docs/github-actions-fastapi-vps.md`
+- `docs/deploy-api-workflow-checklist.md`

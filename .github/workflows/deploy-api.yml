@@ -6,9 +6,19 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-api-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  ARCHIVE_NAME: datamaq-communications-api.tar.gz
+
 jobs:
-  ci:
+  build_tests:
+    name: "Build :: Tests"
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,7 +26,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
 
       - name: Install deps
         run: |
@@ -26,32 +37,40 @@ jobs:
 
       - name: Run tests
         run: |
-          if [ -d tests ]; then PYTHONPATH="${{ github.workspace }}:${PYTHONPATH}" pytest -q; else echo "No tests directory"; fi
+          if [ -d tests ]; then
+            PYTHONPATH="${{ github.workspace }}:${PYTHONPATH}" pytest -q
+          else
+            echo "No tests directory"
+          fi
+
+  build_image:
+    name: "Build :: Docker Image"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Build Docker image
         run: docker build -t datamaq-communications-api:ci .
 
-  deploy:
+  build_gate:
+    name: "Build :: Gate"
     runs-on: ubuntu-latest
-    needs: ci
-    if: github.ref == 'refs/heads/main'
-    environment: production
+    needs: [build_tests, build_image]
     steps:
-      - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{ secrets.VPS_SSH_KEY }}
-            ${{ secrets.GITHUB_DEPLOY_KEY }}
+      - name: Build stage passed
+        run: echo "Build stage passed"
 
-      - name: Add known hosts
-        run: |
-          mkdir -p ~/.ssh
-          if [ -n "${{ secrets.VPS_KNOWN_HOSTS }}" ]; then
-            echo "${{ secrets.VPS_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
-          else
-            ssh-keyscan -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
-          fi
+  deploy_prepare:
+    name: "Deploy :: Prepare"
+    runs-on: ubuntu-latest
+    needs: build_gate
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Preflight checks (runner)
         env:
@@ -70,20 +89,10 @@ jobs:
             exit 1
           fi
           echo "SMTP secret presence check: OK"
-          echo "Known hosts entries on runner:"
-          wc -l ~/.ssh/known_hosts || true
 
-      - name: Deploy on VPS
-        env:
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_FROM: ${{ secrets.SMTP_FROM }}
-          SMTP_TO_DEFAULT: ${{ secrets.SMTP_TO_DEFAULT }}
+      - name: Package workspace archive
         run: |
           set -euo pipefail
-          echo "Connecting to VPS host=${{ secrets.VPS_HOST }} port=${{ secrets.VPS_PORT }} user=${{ secrets.VPS_USER }}"
-
-          ARCHIVE_NAME="datamaq-communications-api.tar.gz"
-          echo "Packing workspace on runner..."
           tar \
             --exclude=.git \
             --exclude=.env \
@@ -91,26 +100,86 @@ jobs:
             --exclude='**/__pycache__' \
             --exclude='.pytest_cache' \
             -czf "/tmp/${ARCHIVE_NAME}" .
+          ls -lh "/tmp/${ARCHIVE_NAME}"
 
-          echo "Uploading workspace archive to VPS..."
-          scp -P "${{ secrets.VPS_PORT }}" \
-            "/tmp/${ARCHIVE_NAME}" \
-            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/${ARCHIVE_NAME}"
+      - name: Upload deployment archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-workspace
+          path: /tmp/${{ env.ARCHIVE_NAME }}
+          if-no-files-found: error
+          retention-days: 1
 
-          ssh -A -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-            "SMTP_HOST='${SMTP_HOST}' SMTP_FROM='${SMTP_FROM}' SMTP_TO_DEFAULT='${SMTP_TO_DEFAULT}' bash -s" << 'EOF'
+  deploy_apply:
+    name: "Deploy :: Apply"
+    runs-on: ubuntu-latest
+    needs: deploy_prepare
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    timeout-minutes: 25
+    steps:
+      - name: Download deployment archive
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-workspace
+          path: /tmp
+
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.VPS_SSH_KEY }}
+            ${{ secrets.GITHUB_DEPLOY_KEY }}
+
+      - name: Add known hosts
+        run: |
+          mkdir -p ~/.ssh
+          if [ -n "${{ secrets.VPS_KNOWN_HOSTS }}" ]; then
+            echo "${{ secrets.VPS_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          fi
+
+      - name: Upload workspace archive to VPS
+        run: |
           set -euo pipefail
-          echo "Remote preflight started"
-          echo "host=$(hostname) user=$(whoami)"
-          mkdir -p "${{ secrets.VPS_APP_DIR }}"
-          cd "${{ secrets.VPS_APP_DIR }}"
+          for i in {1..3}; do
+            if scp -P "${{ secrets.VPS_PORT }}" \
+              "/tmp/${ARCHIVE_NAME}" \
+              "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/${ARCHIVE_NAME}"; then
+              echo "Archive upload OK"
+              break
+            fi
+            echo "Archive upload failed, retry ${i}/3"
+            if [ "$i" -eq 3 ]; then
+              echo "Archive upload failed permanently"
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Apply deployment on VPS
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          SMTP_TO_DEFAULT: ${{ secrets.SMTP_TO_DEFAULT }}
+        run: |
+          set -euo pipefail
+          ssh -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            env SMTP_HOST="${SMTP_HOST}" SMTP_FROM="${SMTP_FROM}" SMTP_TO_DEFAULT="${SMTP_TO_DEFAULT}" \
+            APP_DIR="${{ secrets.VPS_APP_DIR }}" ARCHIVE_NAME="${ARCHIVE_NAME}" \
+            bash -s <<'EOF'
+          set -euo pipefail
+          echo "Remote deploy started host=$(hostname) user=$(whoami)"
+          mkdir -p "${APP_DIR}"
+          cd "${APP_DIR}"
           echo "pwd=$(pwd)"
           ls -la | head -n 30
 
-          if [ -f /tmp/datamaq-communications-api.tar.gz ]; then
+          if [ -f "/tmp/${ARCHIVE_NAME}" ]; then
             echo "Extracting uploaded archive..."
-            tar -xzf /tmp/datamaq-communications-api.tar.gz -C "${{ secrets.VPS_APP_DIR }}"
-            rm -f /tmp/datamaq-communications-api.tar.gz
+            tar -xzf "/tmp/${ARCHIVE_NAME}" -C "${APP_DIR}"
+            rm -f "/tmp/${ARCHIVE_NAME}"
           else
             echo "Uploaded archive not found on VPS"
             exit 1
@@ -164,8 +233,39 @@ jobs:
 
           docker compose up -d --build
           docker compose ps
+          EOF
+
+  verify_local:
+    name: "Deploy :: Verify Local"
+    runs-on: ubuntu-latest
+    needs: deploy_apply
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 15
+    steps:
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.VPS_SSH_KEY }}
+            ${{ secrets.GITHUB_DEPLOY_KEY }}
+
+      - name: Add known hosts
+        run: |
+          mkdir -p ~/.ssh
+          if [ -n "${{ secrets.VPS_KNOWN_HOSTS }}" ]; then
+            echo "${{ secrets.VPS_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          fi
+
+      - name: Verify local deployment
+        run: |
+          set -euo pipefail
+          ssh -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s <<'EOF'
+          set -euo pipefail
+
           for i in {1..20}; do
-            if curl -fsS http://127.0.0.1:8000/telegram/last_chat >/dev/null; then
+            if curl -fsS http://127.0.0.1:8000/health >/dev/null; then
               echo "Healthcheck OK"
               break
             fi
@@ -191,6 +291,44 @@ jobs:
             exit 1
           fi
 
+          contact_payload='{"name":"Smoke Test","email":"smoke@datamaq.com.ar","message":"smoke deploy check","meta":{"source":"deploy-workflow"},"attribution":{"website":""}}'
+          echo "Running local contact POST check (expect 202)..."
+          local_contact_status=$(curl -sS -o /tmp/local_contact_body.txt -w "%{http_code}" -X POST \
+            http://127.0.0.1:8000/contact \
+            -H "Content-Type: application/json" \
+            -d "${contact_payload}")
+          echo "Local contact status=${local_contact_status}"
+          if [ "${local_contact_status}" != "202" ]; then
+            echo "Local contact POST check failed"
+            cat /tmp/local_contact_body.txt || true
+            exit 1
+          fi
+          EOF
+
+  verify_public:
+    name: "Deploy :: Verify Public"
+    runs-on: ubuntu-latest
+    needs: deploy_apply
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 15
+    steps:
+      - name: Verify public deployment
+        run: |
+          set -euo pipefail
+
+          for i in {1..20}; do
+            if curl -fsS https://api.datamaq.com.ar/health >/dev/null; then
+              echo "Public healthcheck OK"
+              break
+            fi
+            echo "Waiting public API... attempt $i/20"
+            sleep 2
+            if [ "$i" -eq 20 ]; then
+              echo "Public healthcheck failed"
+              exit 1
+            fi
+          done
+
           echo "Running public CORS preflight check (https://api.datamaq.com.ar/contact)..."
           public_cors_status=$(curl -sS -o /tmp/public_cors_body.txt -w "%{http_code}" -X OPTIONS \
             https://api.datamaq.com.ar/contact \
@@ -204,19 +342,6 @@ jobs:
           fi
 
           contact_payload='{"name":"Smoke Test","email":"smoke@datamaq.com.ar","message":"smoke deploy check","meta":{"source":"deploy-workflow"},"attribution":{"website":""}}'
-
-          echo "Running local contact POST check (expect 202)..."
-          local_contact_status=$(curl -sS -o /tmp/local_contact_body.txt -w "%{http_code}" -X POST \
-            http://127.0.0.1:8000/contact \
-            -H "Content-Type: application/json" \
-            -d "${contact_payload}")
-          echo "Local contact status=${local_contact_status}"
-          if [ "${local_contact_status}" != "202" ]; then
-            echo "Local contact POST check failed"
-            cat /tmp/local_contact_body.txt || true
-            exit 1
-          fi
-
           echo "Running public contact POST check (expect 202)..."
           public_contact_status=$(curl -sS -o /tmp/public_contact_body.txt -w "%{http_code}" -X POST \
             https://api.datamaq.com.ar/contact \
@@ -229,5 +354,11 @@ jobs:
             exit 1
           fi
 
-          echo "Deploy validation OK"
-          EOF
+  deploy_gate:
+    name: "Deploy :: Gate"
+    runs-on: ubuntu-latest
+    needs: [verify_local, verify_public]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy stage passed
+        run: echo "Deploy validation OK"
