@@ -1,7 +1,7 @@
-import logging
 import json
+import logging
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response
 
 from src.entities.contact import ContactMessage, EmailAddress
 from src.infrastructure.fastapi.request_metadata import get_client_ip, get_x_forwarded_for
@@ -56,6 +56,16 @@ def create_contact_router(
             "email_masked": mask_email(str(raw.get("email", ""))),
         }
 
+    def _options_response() -> Response:
+        return Response(
+            status_code=204,
+            headers={
+                "Access-Control-Allow-Methods": "POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Accept, X-Request-Id",
+                "Vary": "Origin",
+            },
+        )
+
     @router.post(
         "/api/contact",
         status_code=202,
@@ -82,6 +92,11 @@ def create_contact_router(
             success_message="Contact request accepted for processing",
         )
 
+    @router.options("/api/contact", status_code=204, include_in_schema=False)
+    @router.options("/contact", status_code=204, include_in_schema=False)
+    async def contact_options() -> Response:
+        return _options_response()
+
     @router.post(
         "/api/mail",
         status_code=202,
@@ -107,6 +122,11 @@ def create_contact_router(
             endpoint_key="mail",
             success_message="Mail request accepted for processing",
         )
+
+    @router.options("/api/mail", status_code=204, include_in_schema=False)
+    @router.options("/mail", status_code=204, include_in_schema=False)
+    async def mail_options() -> Response:
+        return _options_response()
 
     def _handle_contact_like_request(
         payload: ContactRequestModel,

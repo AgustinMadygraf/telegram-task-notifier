@@ -172,3 +172,12 @@ def test_cors_preflight_allows_required_origins() -> None:
             assert response.status_code == 200
             assert response.headers.get("access-control-allow-origin") == origin
             assert response.headers.get("access-control-allow-methods") == "POST, OPTIONS"
+
+
+def test_options_probe_without_preflight_headers_returns_204() -> None:
+    with _client() as api_client:
+        for path in [CONTACT_PATH, MAIL_PATH]:
+            response = api_client.options(path, headers={"Origin": "https://datamaq.com.ar"})
+            assert response.status_code == 204
+            assert response.headers.get("access-control-allow-origin") == "https://datamaq.com.ar"
+            assert response.headers.get("access-control-allow-methods") == "POST, OPTIONS"

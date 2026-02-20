@@ -192,6 +192,7 @@ def _register_middlewares(fastapi_app: FastAPI, effective_settings: Settings) ->
         started_at = time.perf_counter()
         client_ip = get_client_ip(request)
         forwarded_for = get_x_forwarded_for(request)
+        origin = request.headers.get("Origin", "").strip()
         request_path = request.url.path
         is_health_path = _is_health_path(request_path)
 
@@ -210,6 +211,7 @@ def _register_middlewares(fastapi_app: FastAPI, effective_settings: Settings) ->
                     "duration_ms": duration_ms,
                     "client_ip_real": client_ip,
                     "x_forwarded_for": forwarded_for,
+                    "origin": origin,
                 },
             )
             raise
@@ -230,6 +232,7 @@ def _register_middlewares(fastapi_app: FastAPI, effective_settings: Settings) ->
                 "duration_ms": duration_ms,
                 "client_ip_real": client_ip,
                 "x_forwarded_for": forwarded_for,
+                "origin": origin,
             },
         )
         return response
@@ -250,6 +253,7 @@ def _register_exception_handlers(fastapi_app: FastAPI, effective_settings: Setti
                 "body_size_bytes": body_size,
                 "body_sha256": body_sha256,
                 "errors": exc.errors(),
+                "origin": request.headers.get("Origin", "").strip(),
             },
         )
 
@@ -290,6 +294,7 @@ def _register_exception_handlers(fastapi_app: FastAPI, effective_settings: Setti
                 "method": request.method,
                 "path": request.url.path,
                 "status_code": exc.status_code,
+                "origin": request.headers.get("Origin", "").strip(),
             },
         )
 
